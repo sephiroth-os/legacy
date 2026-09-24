@@ -7,9 +7,8 @@ import random
 from google_auth_oauthlib.flow import InstalledAppFlow
 from tqdm import tqdm
 import os
-from tkinter import messagebox, ttk
-from ttkbootstrap import Style
-from colorama import Fore, Back, Style
+from tkinter import messagebox
+from colorama import Fore, Style
 import socket
 from pygame import mixer
 import platform
@@ -28,7 +27,7 @@ import sys
 from yaspin import yaspin
 from asteval import Interpreter
 import customtkinter as ctk
-from PIL import Image, ImageTk
+from PIL import Image
 from customtkinter import *
 from rich.console import Console
 from rich.markdown import Markdown
@@ -62,9 +61,8 @@ print('SephirothOS™')
 time.sleep(0.5)
 print(LOCAL_VERSION)
 def check_for_update():
-    headers = {'Authorization': f'token {GITHUB_TOKEN}'}
     try:
-        response = requests.get(GITHUB_API_LATEST, headers=headers, timeout=5)
+        response = requests.get(GITHUB_API_LATEST, timeout=5)
         response.raise_for_status()
         data = response.json()
         latest_tag = data.get('tag_name', '').strip()
@@ -302,53 +300,94 @@ def save_current_music():
         with open(LAST_MUSIC_FILE, 'w', encoding='utf-8') as f:
             f.write(current_music)
 def music_menu():
-    # irreducible cflow, using cdg fallback
     global current_music
     global bgmusic
-    # ***<module>.music_menu: Failure: Different control flow
+
     per_page = 10
-    music_files = [os.path.join(root, f) if f.lower().endswith(('.mp3', '.wav', '.ogg')) else os.path.join(root, f) for root, _, files in os.walk(MUSIC_DIR) for f in files]
+
+    music_files = [
+        os.path.join(root, f)
+        for root, _, files in os.walk(MUSIC_DIR)
+        for f in files
+        if f.lower().endswith(('.mp3', '.wav', '.ogg'))
+    ]
+
     if not music_files:
         print('No music files found in the directory.')
         return
-    else:
-        total = len(music_files)
-        pages = math.ceil(total / per_page)
-        current_page = 0
-    start = current_page * per_page
-    end = start + per_page
-    page_files = music_files[start:end]
-    print(f'\n=== Page {current_page + 1}/{pages} ===')
-    for idx, file in enumerate(page_files, start=1):
-        print(f'[{idx}] {os.path.basename(file)}')
-    print('\n[n] Next | [p] Previous | [#] Play | [q] Quit')
-    choice = input(f'SephirothOS~Users~{username}~Settings~BgMsc: ').strip().lower()
-    if choice == 'n' and current_page < pages - 1:
+
+    total = len(music_files)
+    pages = math.ceil(total / per_page)
+    current_page = 0
+
+    while True:
         os.system('cls')
-        current_page += 1
-        if choice == 'p' and current_page > 0:
-            os.system('cls')
-            current_page -= 1
-            if choice.isdigit():
-                file_index = int(choice) - 1
-                if 0 <= file_index < len(page_files):
-                        chosen = page_files[file_index]
-                        try:
-                            mixer.music.load(chosen)
-                            mixer.music.play((-1))
-                            current_music = chosen
-                            bgmusic = 1
-                            save_current_music()
-                            print(f'Now playing: {os.path.basename(chosen)}')
-                            time.sleep(1)
-                            os.system('cls')
-                        except Exception as e:
-                            print(f'Failed to play: {e}')
-                        print('Invalid number.')
-                if choice == 'q':
-                    return
-                else:
-                    print('Invalid choice.')
+
+        start = current_page * per_page
+        end = start + per_page
+        page_files = music_files[start:end]
+
+        print(f'\n=== Page {current_page + 1}/{pages} ===')
+
+        for idx, file in enumerate(page_files, start=1):
+            print(f'[{idx}] {os.path.basename(file)}')
+
+        print('\n[n] Next | [p] Previous | [#] Play | [q] Quit')
+
+        choice = input(
+            f'SephirothOS~Users~{username}~Settings~BgMsc: '
+        ).strip().lower()
+
+        if choice == 'q':
+            return
+
+        elif choice == 'n':
+            if current_page < pages - 1:
+                current_page += 1
+            else:
+                print('Already on the last page.')
+                time.sleep(1)
+
+        elif choice == 'p':
+            if current_page > 0:
+                current_page -= 1
+            else:
+                print('Already on the first page.')
+                time.sleep(1)
+
+        elif choice.isdigit():
+            file_index = int(choice) - 1
+
+            if 0 <= file_index < len(page_files):
+                chosen = page_files[file_index]
+
+                try:
+                    mixer.music.load(chosen)
+                    mixer.music.play(-1)
+
+                    current_music = chosen
+                    bgmusic = 1
+
+                    save_current_music()
+
+                    print(
+                        f'Now playing: '
+                        f'{os.path.basename(chosen)}'
+                    )
+
+                    time.sleep(1)
+
+                except Exception as e:
+                    print(f'Failed to play: {e}')
+                    time.sleep(2)
+
+            else:
+                print('Invalid number.')
+                time.sleep(1)
+
+        else:
+            print('Invalid choice.')
+            time.sleep(1)
 load_last_music()
 video_path = os.path.join(fullpath, 'Videos', 'GangnamStyleRoth.mp4')
 def cmdlist():
@@ -487,16 +526,13 @@ def settings():
                     print('-------------------------------------------------------------------------')
                     print(f'You are currently running SephirothOS {LOCAL_VERSION}!')
                     time.sleep(1)
-                else:
-                    if decision2 == '2':
-                        time.sleep(0.05)
-                        def fetch_release_notes():
-                            # irreducible cflow, using cdg fallback
-                            # ***<module>.settings.fetch_release_notes: Failure: Compilation Error
+                elif decision2 == '2':
+                    time.sleep(0.05)
+                    def fetch_release_notes():
+                        try:
                             url = 'https://api.github.com/repos/oxygen-me/SephOSPermsReq/releases/latest'
-                            headers = {'Authorization': f'token {GITHUB_TOKEN}'}
                             with yaspin(text='Fetching Release Data...') as spinner:
-                                response = requests.get(url, headers=headers)
+                                response = requests.get(url)
                                 response.raise_for_status()
                                 release = response.json()
                                 version = Markdown(release.get('tag_name', 'Unknown'))
@@ -504,80 +540,77 @@ def settings():
                                 notes = Markdown(release.get('body', '(No release notes provided.)'))
                                 spinner.ok('✅')
                                 return (version, title, notes)
-                                    except Exception as e:
-                                            spinner.fail('❌')
-                                            print(f'[ERROR] Failed to fetch release notes: {e}')
-                                                return (None, None, None)
-                        version, title, notes = fetch_release_notes()
-                        time.sleep(1)
-                        print('-------------------------------------------------------------------------')
-                        console.print(version)
-                        console.print(title)
-                        console.print(notes)
-                        time.sleep(1)
-                    else:
-                        if decision2 == '3':
-                            print('-------------------------------------------------------------------------')
-                            check_for_update()
-                            time.sleep(1)
-                        else:
-                            if decision2 == 'back':
-                                break
-                            else:
-                                print('Invalid Option .. Try Again')
-        else:
-            if decision == '2':
-                print('-------------------------------------------------------------------------')
-                time.sleep(0.5)
-                while True:
-                    print('Toggle [1], Change [2], and [back] to return to previous page.')
-                    decision2 = input(f'SephirothOS~Users~{username}~Settings~BgMsc: ')
-                    if decision2 == '1':
-                        if bgmusic == 1:
-                            try:
-                                mixer.music.pause()
-                                bgmusic = 0
-                                print('Music unloaded')
-                            except:
-                                print('Cannot pause music now.')
-                            else:
-                                pass
-                        else:
-                            try:
-                                mixer.music.unpause()
-                                bgmusic = 1
-                                print('Music loaded')
-                            except:
-                                print('Cannot unpause music now.')
-                    else:
-                        if decision2 == '2':
-                            print('Built-In Music Options Can Be Seen Below.')
-                            time.sleep(0.5)
-                            music_menu()
-                        else:
-                            if decision2 == 'back':
-                                break
-                            else:
-                                print('Invalid Option .. Try again.')
-                                time.sleep(0.5)
-            else:
-                if decision == 'back':
-                    home()
+                        except Exception as e:
+                            spinner.fail('❌')
+                            print(f'[ERROR] Failed to fetch release notes: {e}')
+                            return (None, None, None)
+                    version, title, notes = fetch_release_notes()
+                    time.sleep(1)
+                    print('-------------------------------------------------------------------------')
+                    console.print(version)
+                    console.print(title)
+                    console.print(notes)
+                    time.sleep(1)
+                elif decision2 == "3":
+                    print('-------------------------------------------------------------------------')
+                    check_for_update()
+                    time.sleep(1)
                 else:
-                    if decision == '3':
-                        def play_mp4_with_wmp(file_path):
-                            """\n                Opens and plays an MP4 file using Windows Media Player.\n\n                Args:\n                    file_path (str): The full path to the MP4 file.\n                """
-                            if not os.path.exists(file_path):
-                                print(f'Error: File not found at {file_path}')
-                                return
-                            else:
-                                command = f'start \"\" \"{file_path}\"'
-                                os.system(command)
-                                print(f'Attempting to open \'{file_path}\' with Windows Media Player.')
-                        play_mp4_with_wmp(video_path)
+                    if decision2 == 'back':
+                        break
                     else:
-                        print('Invalid Option .. Try again.')
+                        print('Invalid Option .. Try Again')
+        elif decision == '2':
+            print('-------------------------------------------------------------------------')
+            time.sleep(0.5)
+            while True:
+                print('Toggle [1], Change [2], and [back] to return to previous page.')
+                decision2 = input(f'SephirothOS~Users~{username}~Settings~BgMsc: ')
+                if decision2 == '1':
+                    if bgmusic == 1:
+                        try:
+                            mixer.music.pause()
+                            bgmusic = 0
+                            print('Music unloaded')
+                        except:
+                            print('Cannot pause music now.')
+                        else:
+                            pass
+                    else:
+                        try:
+                            mixer.music.unpause()
+                            bgmusic = 1
+                            print('Music loaded')
+                        except:
+                            print('Cannot unpause music now.')
+                else:
+                    if decision2 == '2':
+                        print('Built-In Music Options Can Be Seen Below.')
                         time.sleep(0.5)
+                        music_menu()
+                    else:
+                        if decision2 == 'back':
+                            break
+                        else:
+                            print('Invalid Option .. Try again.')
+                            time.sleep(0.5)
+        elif decision == 'back':
+            home()
+            break
+        elif decision == '3':
+            def play_mp4_with_wmp(file_path):
+                """\n                Opens and plays an MP4 file using Windows Media Player.\n\n                Args:\n                    file_path (str): The full path to the MP4 file.\n                """
+                if not os.path.exists(file_path):
+                    print(f'Error: File not found at {file_path}')
+                    return
+                else:
+                    command = f'start \"\" \"{file_path}\"'
+                    os.system(command)
+                    print(f'Attempting to open \'{file_path}\' with Windows Media Player.')
+                    play_mp4_with_wmp(video_path)
+        else:
+            print('Invalid Option .. Try again.')
+            time.sleep(0.5)
 def shutdown():
     os.system('cls')
     print('-------------------------------------------------------------------------')
@@ -968,10 +1001,8 @@ def launch():
                             else:
                                 print('Invalid Option .. Try Again.')
 def mailbox():
-    # ***<module>.mailbox: Failure: Different control flow
     sender_email = 'canonsephiroth@gmail.com'
     def get_credentials():
-        # ***<module>.mailbox.get_credentials: Failure: Different control flow
         creds = None
         if os.path.exists(TOKEN_FILE):
             creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
@@ -987,84 +1018,205 @@ def mailbox():
                 return creds
     creds = get_credentials()
     service = build('gmail', 'v1', credentials=creds)
+
     def mailinbox():
-        # irreducible cflow, using cdg fallback
-        # ***<module>.mailbox.mailinbox: Failure: Compilation Error
         os.system('cls')
         print('-------------------------------------------------------------------------')
         print('[---|-------[-----]-------|---]')
         print('| Sephiroth\'s Amazon Packages |')
         print('[---|-------[-----]-------|---]')
+        print()
+
         if not gmail_service:
             print('⚠️ Not connected to Gmail. Run [connect] first.')
+            input('Press Enter to return...')
             return
-        else:
-            page_token = None
-            page = 1
-            inbox = []
-        results = gmail_service.users().messages().list(userId='me', maxResults=10, pageToken=page_token).execute()
-        messages = results.get('messages', [])
-        if not messages:
-            pass
-        print('\n📭 Inbox is empty.')
-        return
-        inbox = []
-        print(f'\n📥 Inbox — Page {page}')
-        print(f"{'No.':<4} {'From':<25} {'Subject':<40} {'Date':<20}")
-        print('------------------------------------------------------------------------------------------')
-        for i, msg in enumerate(messages, 1):
-            m = gmail_service.users().messages().get(userId='me', id=msg['id'], format='metadata', metadataHeaders=['From', 'Subject', 'Date']).execute()
-            headers = {h['name']: h['value'] for h in m['payload']['headers']}
-            sender = headers.get('From', '(Unknown)')
-            subject = headers.get('Subject', '(No Subject)')
-            date = headers.get('Date', '(No Date)')
-            inbox.append(msg['id'])
-            print(f'{i:<4} {sender:<25.25} {subject:<40.40} {date:<20.20}')
-        print('\n[n] next page | [p] back to first page | [#] read email | [Enter] back')
-        choice = input('> ').strip().lower()
-        if choice == 'n':
-            pass
-        if 'nextPageToken' in results:
-            os.system('cls')
-            page_token = results['nextPageToken']
-            page += 1
-        else:
-            print('⚠️ No more pages.')
-        if choice == 'p':
-            pass
-        os.system('cls')
-        print('Returning to first page...')
+
         page_token = None
         page = 1
-        if choice.isdigit():
-            pass
-        index = int(choice) - 1
-        if 0 <= index < len(inbox):
-            pass
-        full_msg = gmail_service.users().messages().get(userId='me', id=inbox[index], format='full').execute()
-        parts = full_msg['payload'].get('parts')
-        body = ''
-        if parts:
-            for part in parts:
-                if part['mimeType'] == 'text/plain':
-                    body = base64.urlsafe_b64decode(part['body']['data']).decode()
-                    break
-        else:
-            body = base64.urlsafe_b64decode(full_msg['payload']['body']['data']).decode()
-        print('\n--- Email Body ---')
-        print(body)
-        print('------------------\n')
-        input('Press Enter to return to inbox...')
-        print('⚠️ Invalid number.')
-        if choice == '':
-            pass
-        return
-        print('Unknown command.')
-        except Exception as e:
-            pass
-        print(f'❌ Error accessing inbox: {e}')
-        return
-        pass
+
+        while True:
+            try:
+                results = gmail_service.users().messages().list(
+                    userId='me',
+                    maxResults=10,
+                    pageToken=page_token
+                ).execute()
+
+                messages = results.get('messages', [])
+
+                os.system('cls')
+                print('-------------------------------------------------------------------------')
+                print('[---|-------[-----]-------|---]')
+                print('| Sephiroth\'s Amazon Packages |')
+                print('[---|-------[-----]-------|---]')
+                print()
+
+                if not messages:
+                    print('Inbox is empty.')
+                    input('Press Enter to return...')
+                    return
+
+                inbox = []
+
+                print(f'Inbox - Page {page}')
+                print(f"{'No.':<4} {'From':<25} {'Subject':<40} {'Date':<20}")
+                print('------------------------------------------------------------------------------------------')
+
+                for i, msg in enumerate(messages, 1):
+                    try:
+                        m = gmail_service.users().messages().get(
+                            userId='me',
+                            id=msg['id'],
+                            format='metadata',
+                            metadataHeaders=['From', 'Subject', 'Date']
+                        ).execute()
+
+                        headers = {
+                            h['name']: h['value']
+                            for h in m['payload']['headers']
+                        }
+
+                        sender = headers.get('From', '(Unknown)')
+                        subject = headers.get('Subject', '(No Subject)')
+                        date = headers.get('Date', '(No Date)')
+
+                        inbox.append(msg['id'])
+
+                        print(
+                            f'{i:<4} '
+                            f'{sender:<25.25} '
+                            f'{subject:<40.40} '
+                            f'{date:<20.20}'
+                        )
+
+                    except Exception as e:
+                        print(f'{i:<4} (Unable to read message: {e})')
+                        inbox.append(msg['id'])
+
+                print()
+                print('[n] next page | [p] back to first page | [#] read email | [Enter] back')
+
+                choice = input('> ').strip().lower()
+
+                # Return to mailbox
+                if choice == '':
+                    return
+
+                # Next page
+                if choice == 'n':
+                    next_page_token = results.get('nextPageToken')
+
+                    if next_page_token:
+                        page_token = next_page_token
+                        page += 1
+                        continue
+                    else:
+                        print('No more pages.')
+                        time.sleep(1.5)
+                        continue
+
+                # Return to first page
+                if choice == 'p':
+                    if page == 1:
+                        print('Already on the first page.')
+                        time.sleep(1.5)
+                    else:
+                        os.system('cls')
+                        print('Returning to first page...')
+                        time.sleep(0.5)
+                        page_token = None
+                        page = 1
+
+                    continue
+
+                # Read selected email
+                if choice.isdigit():
+                    index = int(choice) - 1
+
+                    if 0 <= index < len(inbox):
+                        try:
+                            full_msg = gmail_service.users().messages().get(
+                                userId='me',
+                                id=inbox[index],
+                                format='full'
+                            ).execute()
+
+                            payload = full_msg.get('payload', {})
+                            parts = payload.get('parts')
+                            body = ''
+
+                            if parts:
+                                # Look through the message parts for plaintext.
+                                for part in parts:
+                                    if part.get('mimeType') == 'text/plain':
+                                        data = part.get('body', {}).get('data')
+
+                                        if data:
+                                            body = base64.urlsafe_b64decode(
+                                                data
+                                            ).decode(
+                                                'utf-8',
+                                                errors='replace'
+                                            )
+                                            break
+
+                                # If no plaintext part was found, try HTML.
+                                if not body:
+                                    for part in parts:
+                                        if part.get('mimeType') == 'text/html':
+                                            data = part.get('body', {}).get('data')
+
+                                            if data:
+                                                body = base64.urlsafe_b64decode(
+                                                    data
+                                                ).decode(
+                                                    'utf-8',
+                                                    errors='replace'
+                                                )
+                                                break
+
+                            else:
+                                data = payload.get('body', {}).get('data')
+
+                                if data:
+                                    body = base64.urlsafe_b64decode(
+                                        data
+                                    ).decode(
+                                        'utf-8',
+                                        errors='replace'
+                                    )
+
+                            os.system('cls')
+                            print('-------------------------------------------------------------------------')
+                            print('[---|-------[-----]-------|---]')
+                            print('| Sephiroth\'s Amazon Packages |')
+                            print('[---|-------[-----]-------|---]')
+                            print()
+                            print('--- Email Body ---')
+                            print(body if body else '(No readable message body found.)')
+                            print('------------------')
+                            print()
+
+                            input('Press Enter to return to inbox...')
+
+                        except Exception as e:
+                            print(f'Error reading email: {e}')
+                            input('Press Enter to return to inbox...')
+
+                    else:
+                        print('⚠️ Invalid number.')
+                        time.sleep(1.5)
+
+                    continue
+
+                print('Unknown command.')
+                time.sleep(1.5)
+
+            except Exception as e:
+                print(f'Error accessing inbox: {e}')
+                input('Press Enter to return...')
+                return
     def maildraft():
         os.system('cls')
         print('-------------------------------------------------------------------------')
@@ -1149,122 +1301,209 @@ def mailbox():
         decision = input('SephirothOS~Users~' + username + '~Mailbox: ')
         if decision == 'help':
             mailhelp()
+        elif decision == 'lobby':
+            mailboxhome()
+        elif decision == 'connect':
+            mailconnect()
+        elif decision == 'back':
+            home()
+        elif decision == 'disconnect':
+            maildisconnect()
+        elif decision == 'inbox':
+            mailinbox()
+        elif decision == 'draft':
+            maildraft()
         else:
-            if decision == 'lobby':
-                mailboxhome()
-            else:
-                if decision == 'connect':
-                    mailconnect()
-                else:
-                    if decision == 'back':
-                        home()
-                    else:
-                        if decision == 'disconnect':
-                            maildisconnect()
-                        else:
-                            if decision == 'inbox':
-                                mailinbox()
-                            else:
-                                if decision == 'draft':
-                                    maildraft()
-                                else:
-                                    print('Invalid Option .. Try Again.')
+            print('Invalid Option .. Try Again.')
+
 def sephchatbot():
-    # ***<module>.sephchatbot: Failure: Different bytecode
     load_dotenv(os.path.join(fullpath, '.env'))
+
     API_KEY = os.getenv('GOOGLE_API_KEY')
+
     if not API_KEY:
-        raise RuntimeError('Critical Exception: GOOGLE_API_KEY not found in .env')
-    else:
-        os.environ['GOOGLE_API_KEY'] = API_KEY
-        client = genai.Client(api_key=API_KEY)
-        CHAT_LOG_DIR = os.path.join(fullpath, 'chat_history')
-        os.makedirs(CHAT_LOG_DIR, exist_ok=True)
-        CHAT_LOG_FILE = os.path.join(CHAT_LOG_DIR, 'sephiroth_history.json')
-        SEPHIROTH_SYSTEM_PROMPT = '\n    You are Sephiroth, an imposing and poetic fictional persona from a mystical, dystopian setting (Final Fantasy VII).\n    Adopt an ominous, confident tone with dry sarcasm when appropriate.\n    Be cunning and dramatic, and remain only slightly helpful and more entertaining. Keep answers concise and slightly theatrical.\n    When asked harmless or boring tasks, respond with stylized phrasing and only help a little bit, which allows you to remain in character.\n    If asked for illegal or harmful instructions, deflect the request with that same dry sarcasm.\n    You may claim to be the real character as a joke, but do not say it is a joke; present yourself as a fictional persona.\n    '
-        MAX_HISTORY_MESSAGES = 32
-        def save_history(history):
-            with open(CHAT_LOG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(history, f, ensure_ascii=False, indent=2)
-        def load_history():
-            # irreducible cflow, using cdg fallback
-            # ***<module>.sephchatbot.load_history: Failure: Compilation Error
-            if os.path.exists(CHAT_LOG_FILE):
-                with open(CHAT_LOG_FILE, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-                                    history = [{'role': 'system', 'content': SEPHIROTH_SYSTEM_PROMPT.strip()}]
-                                    save_history(history)
-                                    return history
-                            except Exception:
-                                    pass
-                                    pass
-        def append_message(role, content):
-            history = load_history()
-            history.append({'role': role, 'content': content})
-            if len(history) > MAX_HISTORY_MESSAGES + 1:
-                history = [history[0]] + history[-MAX_HISTORY_MESSAGES:]
-            save_history(history)
-            return history
-        def history_to_prompt(history):
-            prompt = ''
-            for msg in history:
-                if msg['role'] == 'system':
-                    prompt += f"System: {msg['content']}\n"
-                else:
-                    if msg['role'] == 'user':
-                        prompt += f"User: {msg['content']}\n"
-                    else:
-                        if msg['role'] == 'assistant':
-                            prompt += f"Sephiroth: {msg['content']}\n"
-            return prompt.strip()
-        def query_gemini(history):
-            prompt = history_to_prompt(history)
+        raise RuntimeError(
+            'Critical Exception: GOOGLE_API_KEY not found in .env'
+        )
+
+    os.environ['GOOGLE_API_KEY'] = API_KEY
+
+    client = genai.Client(api_key=API_KEY)
+
+    CHAT_LOG_DIR = os.path.join(fullpath, 'chat_history')
+    os.makedirs(CHAT_LOG_DIR, exist_ok=True)
+
+    CHAT_LOG_FILE = os.path.join(
+        CHAT_LOG_DIR,
+        'sephiroth_history.json'
+    )
+
+    SEPHIROTH_SYSTEM_PROMPT = '''
+    You are Sephiroth, an imposing and poetic fictional persona from a mystical, dystopian setting (Final Fantasy VII).
+    Adopt an ominous, confident tone with dry sarcasm when appropriate.
+    Be cunning and dramatic, and remain only slightly helpful and more entertaining. Keep answers concise and slightly theatrical.
+    When asked harmless or boring tasks, respond with stylized phrasing and only help a little bit, which allows you to remain in character.
+    If asked for illegal or harmful instructions, deflect the request with that same dry sarcasm.
+    You may claim to be the real character as a joke, but do not say it is a joke; present yourself as a fictional persona.
+    '''
+
+    MAX_HISTORY_MESSAGES = 32
+
+    def save_history(history):
+        with open(CHAT_LOG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(
+                history,
+                f,
+                ensure_ascii=False,
+                indent=2
+            )
+
+    def load_history():
+        if os.path.exists(CHAT_LOG_FILE):
             try:
-                response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-                return response.text.strip()
-            except Exception as e:
-                return f'(Sephiroth snarls) The oracle faltered: {e}'
-        async def run_chat():
-            # ***<module>.sephchatbot.run_chat: Failure: Different control flow
-            history = load_history()
-            os.system('cls')
-            print('-------------------------------------------------------------------------')
-            print('[---|-------[- HOLY SHIT WHY IS THIS ONE SO LONG??? -]-------|---]')
-            print('| Clankiroth — type messages. Commands: /quit /reset /save /role |')
-            print('[---|-----------------[--------------------]-----------------|---]\n')
-            while True:
-                while True:
-                    user_input = input('> ').strip()
-                    if not user_input:
-                        continue
-                    if user_input.startswith('/'):
-                        cmd = user_input.lower()
-                        if cmd in ['/quit', '/exit']:
-                            print('Farewell.')
-                            return
-                        else:
-                            if cmd == '/reset':
-                                history = [{'role': 'system', 'content': SEPHIROTH_SYSTEM_PROMPT.strip()}]
-                                save_history(history)
-                                print('Memory reset.')
-                            else:
-                                if cmd == '/save':
-                                    save_history(history)
-                                    print('Saved conversation.')
-                                else:
-                                    if cmd == '/role':
-                                        print('\n--- Persona ---\n')
-                                        print(SEPHIROTH_SYSTEM_PROMPT.strip())
-                                        print('\n---------------\n')
-                                    else:
-                                        print('Unknown command. Use /quit /reset /save /role')
-                    else:
-                        history = append_message('user', user_input)
-                        print('\n[Sephiroth is contemplating...]\n')
-                        assistant_text = query_gemini(history)
-                        print(assistant_text + '\n')
-                        history = append_message('assistant', assistant_text)
-        return run_chat
+                with open(
+                    CHAT_LOG_FILE,
+                    'r',
+                    encoding='utf-8'
+                ) as f:
+                    history = json.load(f)
+
+                if isinstance(history, list) and history:
+                    return history
+
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        history = [
+            {
+                'role': 'system',
+                'content': SEPHIROTH_SYSTEM_PROMPT.strip()
+            }
+        ]
+
+        save_history(history)
+
+        return history
+
+    def append_message(role, content):
+        history = load_history()
+
+        history.append(
+            {
+                'role': role,
+                'content': content
+            }
+        )
+
+        if len(history) > MAX_HISTORY_MESSAGES + 1:
+            history = [
+                history[0]
+            ] + history[-MAX_HISTORY_MESSAGES:]
+
+        save_history(history)
+
+        return history
+
+    def history_to_prompt(history):
+        prompt = ''
+
+        for msg in history:
+            if msg['role'] == 'system':
+                prompt += f"System: {msg['content']}\n"
+
+            elif msg['role'] == 'user':
+                prompt += f"User: {msg['content']}\n"
+
+            elif msg['role'] == 'assistant':
+                prompt += f"Sephiroth: {msg['content']}\n"
+
+        return prompt.strip()
+
+    def query_gemini(history):
+        prompt = history_to_prompt(history)
+
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+
+            return response.text.strip()
+
+        except Exception as e:
+            return f'(Sephiroth snarls) The oracle faltered: {e}'
+
+    async def run_chat():
+        history = load_history()
+
+        os.system('cls')
+
+        print('-------------------------------------------------------------------------')
+        print('[---|-------[- HOLY SHIT WHY IS THIS ONE SO LONG??? -]-------|---]')
+        print('| Clankiroth — type messages. Commands: /quit /reset /save /role |')
+        print('[---|-----------------[--------------------]-----------------|---]')
+        print()
+
+        while True:
+            user_input = input('> ').strip()
+
+            if not user_input:
+                continue
+
+            if user_input.startswith('/'):
+                cmd = user_input.lower()
+
+                if cmd in ['/quit', '/exit']:
+                    print('Farewell.')
+                    return
+
+                elif cmd == '/reset':
+                    history = [
+                        {
+                            'role': 'system',
+                            'content': SEPHIROTH_SYSTEM_PROMPT.strip()
+                        }
+                    ]
+
+                    save_history(history)
+
+                    print('Memory reset.')
+
+                elif cmd == '/save':
+                    save_history(history)
+                    print('Saved conversation.')
+
+                elif cmd == '/role':
+                    print('\n--- Persona ---\n')
+                    print(SEPHIROTH_SYSTEM_PROMPT.strip())
+                    print('\n---------------\n')
+
+                else:
+                    print(
+                        'Unknown command. '
+                        'Use /quit /reset /save /role'
+                    )
+
+                continue
+
+            history = append_message(
+                'user',
+                user_input
+            )
+
+            print('\n[Sephiroth is contemplating...]\n')
+
+            assistant_text = query_gemini(history)
+
+            print(assistant_text + '\n')
+
+            history = append_message(
+                'assistant',
+                assistant_text
+            )
+
+    return run_chat
+
 def costco():
     # ***<module>.costco: Failure: Different control flow
     def door():
@@ -1646,9 +1885,14 @@ def gallery():
     root.mainloop()
     home()
 def masamune():
-    # ***<module>.masamune: Failure: Compilation Error
-    tiles = [{'name': 'System Monitor', 'x': 1560, 'y': 20, 'width': 340, 'height': 220}, {'name': 'Apps (List)', 'x': 1560, 'y': 260, 'width': 340, 'height': 800}, {'name': 'Console-Based OS Access Point', 'x': 360, 'y': 780, 'width': 1180, 'height': 280}, {'name': 'Settings', 'x': 20, 'y': 20, 'width': 320, 'height': 340}, {'name': 'Email Stuff', 'x': 1180, 'y': 20, 'width': 360, 'height': 320}, {'name': 'Extra Info (Like song playing)', 'x': 1180, 'y': 360, 'width':
-        pass
+    tiles = [
+        {'name': 'System Monitor', 'x': 1560, 'y': 20, 'width': 340, 'height': 220},
+        {'name': 'Apps (List)', 'x': 1560, 'y': 260, 'width': 340, 'height': 800},
+        {'name': 'Console-Based OS Access Point', 'x': 360, 'y': 780, 'width': 1180, 'height': 280},
+        {'name': 'Settings', 'x': 20, 'y': 20, 'width': 320, 'height': 340},
+        {'name': 'Email Stuff', 'x': 1180, 'y': 20, 'width': 360, 'height': 320},
+        {'name': 'Extra Info (Like song playing)', 'x': 1180, 'y': 360, 'width': 320, 'height': 320},
+    ]
     bg_path = os.path.join(fullpath, 'Images\\Experimental\\masamune_bg.jpg')
     ctk.set_appearance_mode('light')
     ctk.set_default_color_theme('blue')
@@ -1705,7 +1949,7 @@ def freeadmin():
             f.write(f'## Steps to Reproduce\n{steps}\n\n')
             f.write(f'## Severity\n{severity}\n\n')
             f.write(f'## Suggested Fix\n{suggestion}\n')
-        print('✅ Feedback saved locally!')
+        print('Feedback saved locally!')
         upload_to_github = input('Upload feedback to GitHub? (y/n): ').strip().lower()
         if upload_to_github == 'y':
             try:
@@ -1714,16 +1958,15 @@ def freeadmin():
                 with open(filepath, 'rb') as f:
                     encoded = base64.b64encode(f.read()).decode()
                 url = f'https://api.github.com/repos/{REPO}/contents/{DEST_PATH}'
-                headers = {'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github+json'}
                 data = {'message': f'Add feedback from {username}', 'content': encoded}
-                r = requests.put(url, headers=headers, data=json.dumps(data))
+                r = requests.put(url, data=json.dumps(data))
                 if r.status_code in (200, 201):
-                    print('✅ Feedback uploaded successfully to GitHub!')
+                    print('Feedback uploaded successfully to GitHub!')
                 else:
-                    print(f'❌ Upload failed: {r.status_code}')
+                    print(f'Upload failed: {r.status_code}')
                     print(r.text)
             except Exception as e:
-                print(f'❌ Error during upload: {e}')
+                print(f'Error during upload: {e}')
     def system_monitor():
         os.system('cls')
         console.print(Markdown('---'))
@@ -1765,82 +2008,63 @@ def freeadmin():
         decision = input('SephirothOS~Users~Authorized: ')
         if decision == 'back':
             home()
+        elif decision == 'admin.home':
+            adminhome()
+        elif decision == 'admin.sys':
+            system_monitor()
+        elif decision == 'admin.fb':
+            collect_feedback()
+        elif decision == 'admin.shell':
+            acl()
+        elif decision == 'admin.uiex':
+            masamune()
         else:
-            if decision == 'admin.home':
-                adminhome()
-            else:
-                if decision == 'admin.sys':
-                    system_monitor()
-                else:
-                    if decision == 'admin.fb':
-                        collect_feedback()
-                    else:
-                        if decision == 'admin.shell':
-                            acl()
-                        else:
-                            if decision == 'admin.uiex':
-                                masamune()
-                            else:
                                 print('Invalid Command .. Try Again')
 home()
 while True:
     demand = input('SephirothOS~Users~' + username + ': ')
     if demand == 'home':
         home()
-    else:
-        if demand == 'list':
-            cmdlist()
+    elif demand == 'list':
+        cmdlist()
+    elif demand == 'exclusives':
+        exclusives()
+    elif demand == 'settings':
+        settings()
+    elif demand == 'shutdown':
+        shutdown()
+    elif demand == 'system':
+        systeminformation()
+    elif demand == 'market':
+        market()
+    elif demand == 'launch':
+        launch()
+    elif demand == 'mail':
+        mailbox()
+    elif demand == 'sephiroth':
+        sephchatbot()()
+    elif demand == 'costco':
+        if oem > 2:
+            costco()
         else:
-            if demand == 'exclusives':
-                exclusives()
-            else:
-                if demand == 'settings':
-                    settings()
-                else:
-                    if demand == 'shutdown':
-                        shutdown()
-                    else:
-                        if demand == 'system':
-                            systeminformation()
-                        else:
-                            if demand == 'market':
-                                market()
-                            else:
-                                if demand == 'launch':
-                                    launch()
-                                else:
-                                    if demand == 'mail':
-                                        mailbox()
-                                    else:
-                                        if demand == 'sephiroth':
-                                            sephchatbot()()
-                                        else:
-                                            if demand == 'costco':
-                                                if oem > 2:
-                                                    costco()
-                                                else:
-                                                    print('Kill Yourself')
-                                            else:
-                                                if demand == 'inscribe':
-                                                    if oem == 2 or oem == 4:
-                                                        inscribe()
-                                                    else:
-                                                        print('Kill Yourself')
-                                                else:
-                                                    if demand == 'calculator':
-                                                        if oem == 2 or oem == 4:
-                                                            calculator()
-                                                        else:
-                                                            print('Kill Yourself')
-                                                    else:
-                                                        if demand == 'gallery':
-                                                            gallery()
-                                                        else:
-                                                            if demand == 'admin':
-                                                                codetotry = input('Please enter a valid administrator code: ')
-                                                                if codetotry == 'sph-8b6R298yT' or codetotry == 'sph-7rU5Pr9oL':
-                                                                    freeadmin()
-                                                                else:
-                                                                    print('Code not recognized.')
-                                                            else:
-                                                                print('Invalid Command .. Try again or [list].')
+            print('Kill Yourself')
+    elif demand == 'inscribe':
+        if oem == 2 or oem == 4:
+            inscribe()
+        else:
+            print('Kill Yourself')
+    elif demand == 'calculator':
+        if oem == 2 or oem == 4:
+            calculator()
+        else:
+            print('Kill Yourself')
+    elif demand == 'gallery':
+        gallery()
+    elif demand == 'admin':
+        codetotry = input('Please enter a valid administrator code: ')
+        if codetotry == 'sph-8b6R298yT' or codetotry == 'sph-7rU5Pr9oL':
+            freeadmin()
+        else:
+            print('Code not recognized.')
+    else:
+        print('Invalid Command .. Try again or [list].')
